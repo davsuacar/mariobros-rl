@@ -8,23 +8,23 @@ from qlearning_agent import QLearningAgent
 
 class Agent(QLearningAgent):
     def __init__(self):
-        super().__init__(4, 2)
+        super().__init__(114688, 6)
 
     def build_model(self):
         model = Sequential()
-        model.add(Dense(12, activation='relu', input_dim=4))
+        model.add(Dense(12, activation='relu', input_dim=114688))
         model.add(Dense(12, activation='relu'))
-        model.add(Dense(2))
+        model.add(Dense(6))
         model.compile(Adam(lr=0.001), 'mse')
 
         # load the weights of the model if reusing previous training session
-        # model.load_weights("models/cartpole-v0.h5")
+        # model.load_weights("models/mario-v0.h5")
 
         return model
 
 
 if __name__ == '__main__':
-    gym = GymRunner('CartPole-v0')
+    gym = GymRunner('Mario-v0')
     agent = Agent()
 
     gym.train(agent, 100000)
