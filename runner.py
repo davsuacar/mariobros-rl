@@ -1,7 +1,6 @@
 from gym.envs.registration import register
 from PIL import Image
 import numpy as np
-import time
 
 register(
     id='SuperMarioBros-1-1-v0',
@@ -9,6 +8,10 @@ register(
 )
 
 import gym
+
+N_FRAMES = 3
+WIDTH_SIZE = 80
+HEIGHT_SIZE = 80
 
 
 class GymRunner:
@@ -29,10 +32,15 @@ class GymRunner:
             self.env.reset()
 
             # Reset does not return image until first action is set.
-            state = np.zeros((224, 256, 3), dtype=np.uint8)
+            frame = np.zeros((224, 256, 3), dtype=np.uint8)
 
-            img = Image.fromarray(state).convert('LA')
-            state = np.array(img).reshape(1, 114688)
+            img = Image.fromarray(frame).convert('L').resize((WIDTH_SIZE, HEIGHT_SIZE))
+
+            frame = np.array(img.getdata(), dtype=np.uint8).reshape(WIDTH_SIZE, HEIGHT_SIZE)
+
+            frames = [frame] * N_FRAMES
+
+            state = frames
 
             total_reward = 0
 
@@ -42,8 +50,14 @@ class GymRunner:
 
                 # execute the selected action
                 next_state, reward, done, _ = self.env.step(action)
-                img = Image.fromarray(next_state).convert('LA')
-                next_state = np.array(img).reshape(1, 114688)
+                print("Action...", action)
+                print("Reward: ", reward)
+                img = Image.fromarray(next_state).convert('L').resize((WIDTH_SIZE, HEIGHT_SIZE))
+                img = np.array(img.getdata(), dtype=np.uint8).reshape(WIDTH_SIZE, HEIGHT_SIZE)
+
+                # TODO: Change next_states to three frames
+                next_state = img
+
                 reward = self.calc_reward(state, action, reward, next_state, done)
 
                 # record the results of the step
@@ -51,7 +65,10 @@ class GymRunner:
                     agent.record(state, action, reward, next_state, done)
 
                 total_reward += reward
-                state = next_state
+
+                state.append(next_state)
+                state.pop(0)
+
                 if done:
                     break
 
