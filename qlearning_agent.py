@@ -25,7 +25,8 @@ class QLearningAgent:
     def select_action(self, state, do_train=True):
         if do_train and np.random.rand() <= self.epsilon:
             return np.eye(self.action_size, dtype=int)[np.random.choice(self.action_size)]
-        return np.eye(self.action_size, dtype=int)[np.argmax(self.model.predict(np.expand_dims(np.array(state), 0))[0])]
+        return np.eye(self.action_size, dtype=int)[
+                np.argmax(self.model.predict(np.expand_dims(np.array(state), 0))[0])]
 
     def record(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -37,15 +38,19 @@ class QLearningAgent:
         minibatch = random.sample(self.memory, self.batch_size)
         for state, action, reward, next_state, done in minibatch:
             state = np.expand_dims(np.array(state), 0)
+            next_state = np.expand_dims(np.array(next_state), 0)
             target = reward
             if not done:
                 target = (reward + self.gamma *
-                          np.amax(np.eye(self.action_size, dtype=int)[np.argmax(self.model.predict(state)[0])]))
+                          np.amax(np.eye(self.action_size, dtype=int)[np.argmax(self.model.predict(next_state)[0])]))
             target_f = self.model.predict(state)
-            target_f[0][action] = target
+            target_f[0][np.argmax(action)] = target
             self.model.fit(state, target_f, epochs=1, verbose=0)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+
+
 
 

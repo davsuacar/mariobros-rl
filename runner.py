@@ -10,8 +10,8 @@ register(
 import gym
 
 N_FRAMES = 3
-WIDTH_SIZE = 80
-HEIGHT_SIZE = 80
+WIDTH_SIZE = 224
+HEIGHT_SIZE = 256
 
 
 class GymRunner:
@@ -19,9 +19,6 @@ class GymRunner:
 
         self.env = gym.make('SuperMarioBros-1-1-v0')
         self.max_timesteps = max_timesteps
-
-    def calc_reward(self, state, action, gym_reward, next_state, done):
-        return gym_reward
 
     def train(self, agent, num_episodes):
         return self.run(agent, num_episodes, do_train=True)
@@ -48,17 +45,18 @@ class GymRunner:
 
                 action = agent.select_action(state, do_train)
 
+                action_translated = self.translate_action(action)
+
                 # execute the selected action
-                next_state, reward, done, _ = self.env.step(action)
-                print("Action...", action)
-                print("Reward: ", reward)
+                next_state, reward, done, _ = self.env.step(action_translated)
+                #print("Action...", action)
+                #print("Reward: ", reward)
                 img = Image.fromarray(next_state).convert('L').resize((WIDTH_SIZE, HEIGHT_SIZE))
                 img = np.array(img.getdata(), dtype=np.uint8).reshape(WIDTH_SIZE, HEIGHT_SIZE)
 
-                # TODO: Change next_states to three frames
-                next_state = img
-
-                reward = self.calc_reward(state, action, reward, next_state, done)
+                next_state = state
+                next_state.append(img)
+                next_state.pop(0)
 
                 # record the results of the step
                 if do_train:
@@ -66,7 +64,7 @@ class GymRunner:
 
                 total_reward += reward
 
-                state.append(next_state)
+                state.append(img)
                 state.pop(0)
 
                 if done:
@@ -79,7 +77,39 @@ class GymRunner:
             print("episode: {}/{} | score: {} | e: {:.3f}".format(
                 episode + 1, num_episodes, total_reward, agent.epsilon))
 
+    def translate_action(self, network_output):
+        environment_input = np.zeros(6)
+        extra_actions = network_output[7:14]
+        if np.sum(extra_actions) == 1:
+            action_key = np.argmax(extra_actions)
 
+            # [Right + B]
+            if action_key == 0:
+                environment_input = [0, 0, 0, 1, 0, 1]
+            # [Right + A]
+            elif action_key == 1:
+                environment_input = [0, 0, 0, 1, 1, 0]
+            # [Left + B]
+            elif action_key == 2:
+                environment_input = [0, 1, 0, 0, 0, 1]
+            # [Left + A]
+            elif action_key == 3:
+                environment_input = [0, 1, 0, 0, 1, 0]
+            # [Up + A]
+            elif action_key == 4:
+                environment_input = [1, 0, 0, 0, 1, 0]
+            # [Right + A + B]
+            elif action_key == 5:
+                environment_input = [0, 0, 0, 1, 1, 1]
+            # [Left + A + B]
+            elif action_key == 6:
+                environment_input = [0, 1, 0, 0, 1, 1]
+
+        else:
+
+            environment_input[np.argmax(network_output[:6])] = 1
+
+        return environment_input
 
 
 
